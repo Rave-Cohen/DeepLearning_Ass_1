@@ -586,7 +586,7 @@ def init_weights(model, init_type='kaiming'):
 # 
 # The following cells contain commented-out model architectures that can be uncommented and used as needed.
 
-# In[ ]:
+# In[13]:
 
 
 class VanillaMLP(nn.Module):
@@ -712,7 +712,7 @@ best_opt_a = best_params_a["optimizer"]
 best_scheduler_a = best_params_a.get("scheduler", "none")
 
 
-# In[ ]:
+# In[14]:
 
 
 # Assuming OUTPUTS_DIR is already defined as a Path object
@@ -722,7 +722,7 @@ MODEL_SAVE_DIR.mkdir(parents=True, exist_ok=True)
 print(f"Weights will be saved to: {MODEL_SAVE_DIR}")
 
 
-# In[ ]:
+# In[18]:
 
 
 def save_results_as_image(results_dict, outputs_dir="outputs", filename="summary_table.png"):
@@ -789,36 +789,33 @@ def save_results_as_image(results_dict, outputs_dir="outputs", filename="summary
     plt.show() 
 
     print(f"✅ Modified table saved to: {final_save_path}")
-# Run to generate the new aligned table
-# 1. Reconstruct a results_log dictionary from Optuna Phase A
+
+
 results_log = {}
 
 for trial in study_a.trials:
     if trial.state.name == "COMPLETE":
-        # Extract the hidden dims from the trial params
-        n_layers = trial.params['n_layers']
-        hidden_dims = [trial.params[f"n_units_l{i}"] for i in range(n_layers)]
+        # Check if the trial actually has the saved history attribute
+        if "history" in trial.user_attrs:
+            n_layers = trial.params['n_layers']
+            hidden_dims = [power_of_2[trial.params[f"layer_{i}_idx"]] for i in range(n_layers)]
 
-        # Create a mock data structure compatible with your function
-        results_log[f"Trial_{trial.number}"] = {
-            "history": {
-                "val_acc": [trial.value],  # Your function needs a list to call max()
-            },
-            "config": {
-                "hidden_dims": hidden_dims,
-                "activation": trial.params["activation"],
-                "init": "kaiming", # Static in our setup
-                "optimizer": trial.params["optimizer"],
-                "lr": trial.params["lr"],
-                "scheduler": "none"
+            results_log[f"Trial_{trial.number}"] = {
+                "history": trial.user_attrs["history"], # Pull the REAL history
+                "config": {
+                    "hidden_dims": hidden_dims,
+                    "activation": trial.params["activation"],
+                    "optimizer": trial.params["optimizer"],
+                    "lr": trial.params["lr"]
+                }
             }
-        }
 
-# 2. Now run your existing plotting function
+
+# Now call the plotting function
 save_results_as_image(results_log, filename="phase_a_summary_table.png")
 
 
-# In[ ]:
+# In[20]:
 
 
 def plot_training_results(results_dict, exp_name=None):
@@ -862,8 +859,14 @@ def plot_training_results(results_dict, exp_name=None):
     ax2.grid(True, linestyle='--', alpha=0.6)
 
     # 3. Add a "Metadata" footer with the Final Results
-    final_txt = (f"Final Val Acc: {history['val_acc'][-1]:.4f}  |  "
-                 f"Test Acc: {data.get('test_acc', 'N/A'):.4f}")
+    # We wrap the values in float() to ensure the :.4f formatting works
+    val_acc_val = float(history['val_acc'][-1]) if history['val_acc'][-1] is not None else 0.0
+
+    test_acc_raw = data.get('test_acc', 'N/A')
+    test_acc_display = f"{float(test_acc_raw):.4f}" if isinstance(test_acc_raw, (int, float)) else "N/A"
+
+    final_txt = (f"Final Val Acc: {val_acc_val:.4f}  |  "
+                 f"Test Acc: {test_acc_display}")
     fig.text(0.5, 0.02, final_txt, ha='center', fontsize=12, 
              bbox=dict(facecolor='white', alpha=0.8, edgecolor='#CCCCCC'))
 
@@ -884,7 +887,7 @@ plot_training_results(results_log)
 # ImprovedMLP
 # 
 
-# In[ ]:
+# In[21]:
 
 
 # 1. Calculate stats from the already loaded train_dataset
@@ -934,7 +937,7 @@ test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False)
 print("✅ Data re-loaded with improved transforms and normalization.")
 
 
-# In[ ]:
+# In[22]:
 
 
 class ImprovedMLP(nn.Module):
