@@ -2,15 +2,22 @@
 #SBATCH --job-name=phase_b_grid
 #SBATCH --output=outputs/phase_b_grid_%j.out
 #SBATCH --error=outputs/phase_b_grid_%j.err
-#SBATCH --time=12:00:00           # 12 hours max (it will likely finish much faster due to early stopping)
-#SBATCH --gres=gpu:1              # Request 1 GPU
-#SBATCH --cpus-per-task=4         # 4 CPU cores for data loading
-#SBATCH --mem=24G                 # 16 GB of RAM
+#SBATCH --partition=course
+#SBATCH --qos=course
+#SBATCH --time=12:00:00
+#SBATCH --gres=gpu:1
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=24G
+#SBATCH --mail-type=END,FAIL
+#SBATCH --mail-user=raveco@post.bgu.ac.il
 
-# Load your environment if needed (uncomment and change 'base' to your env name if you use conda)
-# source ~/miniconda3/etc/profile.d/conda.sh
-# conda activate neuro_dl
+# 1. This line finds where your conda is installed and tells this script how to use it
+source $(conda info --base)/etc/profile.d/conda.sh
 
-echo "🚀 Starting Phase B Improved Grid Search on $(hostname)"
-python improved_train_standalone.py
+# 2. Now it will actually recognize this command
+conda activate neuro_dl
+
+# 3. Run the script
+echo "🚀 Starting Phase B on $(hostname)"
+python -u improved_train_standalone.py
 echo "🎉 Job finished!"
